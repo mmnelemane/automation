@@ -48,12 +48,15 @@
     <hudson.matrix.TextAxis>
       <name>component</name>
       <values>
+        <string>suse-cloud-upgrade</string>
         <string>crowbar</string>
         <string>crowbar-core</string>
         <string>crowbar-openstack</string>
         <string>crowbar-ceph</string>
         <string>crowbar-ha</string>
         <string>crowbar-hyperv</string>
+        <string>openstack-dashboard-theme-SUSE</string>
+        <string>release-notes-suse-openstack-cloud</string>
         <string>crowbar-barclamp-bios</string>
         <string>crowbar-barclamp-ceilometer</string>
         <string>crowbar-barclamp-ceph</string>
@@ -88,8 +91,6 @@
         <string>crowbar-barclamp-tempest</string>
         <string>crowbar-barclamp-trove</string>
         <string>crowbar-barclamp-updater</string>
-        <string>openstack-dashboard-theme-SUSE</string>
-        <string>suse-cloud-upgrade</string>
       </values>
     </hudson.matrix.TextAxis>
     <hudson.matrix.LabelAxis>
@@ -107,7 +108,7 @@
       </values>
     </hudson.matrix.TextAxis>
   </axes>
-  <combinationFilter>!(       ( ["Devel:Cloud:4:Staging"].contains(project)  &amp;&amp;       ["crowbar-barclamp-manila"].contains(component)     )   ||      (       ["Devel:Cloud:4:Staging", "Devel:Cloud:5:Staging"].contains(project)  &amp;&amp;       ["openstack-dashboard-theme-SUSE", "crowbar-core", "crowbar-openstack", "crowbar-ha", "crowbar-hyperv", "crowbar-ceph"].contains(component)      )   ||     (        ( ! ["Devel:Cloud:4:Staging", "Devel:Cloud:5:Staging"].contains(project) ) &amp;&amp;       component.startsWith('crowbar-barclamp-')     ) )</combinationFilter>
+  <combinationFilter>!(       ( ["Devel:Cloud:4:Staging"].contains(project)  &amp;&amp;       ["crowbar-barclamp-manila"].contains(component)     )   ||      (       ["Devel:Cloud:4:Staging", "Devel:Cloud:5:Staging"].contains(project)  &amp;&amp;       ["openstack-dashboard-theme-SUSE", "crowbar-core", "crowbar-openstack", "crowbar-ha", "crowbar-hyperv", "crowbar-ceph", "release-notes-suse-openstack-cloud"].contains(component)      )   ||     (        ( ! ["Devel:Cloud:4:Staging", "Devel:Cloud:5:Staging"].contains(project) ) &amp;&amp;       component.startsWith('crowbar-barclamp-')     ) )</combinationFilter>
   <builders>
     <hudson.tasks.Shell>
       <command>PROJECTSOURCE=IBS/${project}
