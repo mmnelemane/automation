@@ -74,8 +74,8 @@ Default: openvswitch</description>
           <defaultValue/>
         </hudson.model.StringParameterDefinition>
         <hudson.model.StringParameterDefinition>
-          <name>n</name>
-          <description>Number of the QA cloud (we have qa2, qa3, qa4)</description>
+          <name>hw_number</name>
+          <description>Name of the  QA cloud server (we have 2,3,4)</description>
           <defaultValue>2</defaultValue>
         </hudson.model.StringParameterDefinition>
         <hudson.model.StringParameterDefinition>
@@ -90,8 +90,8 @@ Default: openvswitch</description>
         </hudson.model.StringParameterDefinition>
         <hudson.model.StringParameterDefinition>
           <name>nodenumber</name>
-          <description>Default nodenumber is 7 as the qa2 cloud is the default here and it has 7 nodes</description>
-          <defaultValue/>
+          <description>Default nodenumber is 7 as the qa2 cloud is the default here and it has 7 nodes. Cloud qa3 has 8 nodes</description>
+          <defaultValue>7</defaultValue>
         </hudson.model.StringParameterDefinition>
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>
@@ -114,10 +114,8 @@ Default: openvswitch</description>
   <concurrentBuild>true</concurrentBuild>
   <builders>
     <hudson.tasks.Shell>
-      <command>admin=crowbar$n
-cloud=qa$n
-nodenumber:=7
-: ${nodenumber:=7}
+      <command>admin=crowbar$hw_number
+cloud=qa$hw_number
 tempestoptions="-t -s"
 
 if [ ! -z "$UPDATEREPOS" ] ; then
