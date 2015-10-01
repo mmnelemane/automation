@@ -72,7 +72,7 @@
               <properties>mode=basetest
 cloudsource=develcloud6
 nodenumber=2
-mkcloudtarget=instonly addupdaterepo runupdate setup_aliases batch testsetup cct
+mkcloudtarget=all_batch_noreboot
 scenario=cloud6-2nodes-default.yml
 want_node_aliases=controller=1,compute-kvm=1</properties>
             </hudson.plugins.parameterizedtrigger.PredefinedBuildParameters>
