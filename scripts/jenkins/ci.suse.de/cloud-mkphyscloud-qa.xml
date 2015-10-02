@@ -93,6 +93,11 @@ Default: openvswitch</description>
           <description>Default nodenumber is 7 as the qa2 cloud is the default here and it has 7 nodes. Cloud qa3 has 8 nodes</description>
           <defaultValue>7</defaultValue>
         </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>want_ipmi</name>
+          <description/>
+          <defaultValue>true</defaultValue>
+        </hudson.model.StringParameterDefinition>
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>
     <com.sonyericsson.rebuild.RebuildSettings plugin="rebuild@1.25">
