@@ -51,7 +51,7 @@ of Cloud 6 from SUSE Namespace + updates</description>
         <hudson.plugins.parameterizedtrigger.BlockableBuildTriggerConfig>
           <configs>
             <hudson.plugins.parameterizedtrigger.PredefinedBuildParameters>
-              <properties>cloudsource=develcloud6
+              <properties>cloudsource=susecloud6
 nodenumber=2
 want_test_updates=1</properties>
             </hudson.plugins.parameterizedtrigger.PredefinedBuildParameters>
