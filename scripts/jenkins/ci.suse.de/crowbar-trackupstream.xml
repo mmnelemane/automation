@@ -25,16 +25,16 @@
       <permission>com.cloudbees.plugins.credentials.CredentialsProvider.Create:cloud</permission>
       <permission>hudson.model.Item.Cancel:cloud</permission>
       <permission>hudson.model.Item.Delete:cloud</permission>
-      <permission>com.cloudbees.plugins.credentials.CredentialsProvider.Update:cloud</permission>
       <permission>hudson.model.Run.Update:cloud</permission>
+      <permission>com.cloudbees.plugins.credentials.CredentialsProvider.Update:cloud</permission>
     </hudson.security.AuthorizationMatrixProperty>
+    <com.sonyericsson.jenkins.plugins.bfa.model.ScannerJobProperty plugin="build-failure-analyzer@1.13.0">
+      <doNotScan>false</doNotScan>
+    </com.sonyericsson.jenkins.plugins.bfa.model.ScannerJobProperty>
     <com.sonyericsson.rebuild.RebuildSettings plugin="rebuild@1.25">
       <autoRebuild>false</autoRebuild>
       <rebuildDisabled>false</rebuildDisabled>
     </com.sonyericsson.rebuild.RebuildSettings>
-    <com.sonyericsson.jenkins.plugins.bfa.model.ScannerJobProperty plugin="build-failure-analyzer@1.13.0">
-      <doNotScan>false</doNotScan>
-    </com.sonyericsson.jenkins.plugins.bfa.model.ScannerJobProperty>
   </properties>
   <scm class="hudson.scm.NullSCM"/>
   <canRoam>true</canRoam>
@@ -131,8 +131,8 @@ update_automation track-upstream-and-package.pl
 OBS_TYPE=${PROJECTSOURCE%%/*}
 OBS_PROJECT=${PROJECTSOURCE##*/}
 
-# default is SLE_12
-BUILD_DIST=SLE_12
+BUILD_DIST=SLE_12_SP1
+OSC_BUILD_ARCH=x86_64
 
 case $project in
   Devel:Cloud:[45]*)
@@ -144,11 +144,9 @@ esac
 case $OBS_TYPE in
   OBS) OSCAPI="https://api.opensuse.org"
        OSC_BUILD_DIST=$BUILD_DIST
-       OSC_BUILD_ARCH=x86_64
        ;;
   IBS) OSCAPI="https://api.suse.de"
        OSC_BUILD_DIST=$BUILD_DIST
-       OSC_BUILD_ARCH=x86_64
        ;;
   *)   echo "This jenkins instance only interacts with OBS or IBS."
        exit 1
