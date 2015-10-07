@@ -30,7 +30,7 @@ forcerebuild: trigger unseen, pending and failed PRs</description>
     </com.sonyericsson.rebuild.RebuildSettings>
   </properties>
   <scm class="hudson.scm.NullSCM"/>
-  <assignedNode>openstack-trackupstream</assignedNode>
+  <assignedNode>cloud-trigger</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>
   <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
@@ -46,6 +46,8 @@ forcerebuild: trigger unseen, pending and failed PRs</description>
       <command>## THIS IS A TRIGGER JOB ONLY - NO WORKER CODE IN HERE - DO NOT DARE TO ADD SOME
 ## TRIGGER JOBS ARE MOVED TO A DEDICATED TRIGGER NODE
 ## THIS JOB IS ABOUT PRs FOR THE AUTOMATION AND CCT REPO
+[[ $NODE_NAME != 'cloud-trigger' ]] &amp;&amp; exit 99
+##
 
 set -x
 
