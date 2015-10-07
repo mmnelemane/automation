@@ -1348,21 +1348,11 @@ EOF
         # production cloud has a /22 network
         /opt/dell/bin/json-edit -a attributes.network.networks.nova_fixed.netmask -v 255.255.252.0 $netfile
     fi
-    if [[ $cloud = qa1 ]] ; then
+    if [[ $cloud =~ qa ]] ; then
         # QA clouds have too few IP addrs, so smaller subnets are used
-        wget -O$netfile http://info.cloudadm.qa.suse.de/net-json/dual_private_vm_network
+        wget -O$netfile http://info.cloudadm.qa.suse.de/net-json/${cloud}_dual_private_vm_network
+        iscloudver 6plus && sed -i -e 's/bc-template/template/' $netfile
     fi
-    if [[ $cloud = qa2 ]] ; then
-        # QA clouds have too few IP addrs, so smaller subnets are used
-        wget -O$netfile http://info.cloudadm.qa.suse.de/net-json/cloud2_dual_private_vm_network
-    fi
-    if [[ $cloud = qa3 ]] ; then
-        wget -O$netfile http://info.cloudadm.qa.suse.de/net-json/cloud3_dual_private_vm_network
-    fi
-    if [[ $cloud = qa4 ]] ; then
-        wget -O$netfile http://info.cloudadm.qa.suse.de/net-json/cloud4_dual_private_vm_network
-    fi
-    [[ $cloud =~ qa ]] && iscloudver 6plus && sed -i -e 's/bc-template/template/' $netfile
     if [[ $cloud = p2 ]] ; then
         /opt/dell/bin/json-edit -a attributes.network.networks.public.netmask -v 255.255.252.0 $netfile
         /opt/dell/bin/json-edit -a attributes.network.networks.nova_fixed.ranges.dhcp.end -v 44.0.3.254 $netfile
