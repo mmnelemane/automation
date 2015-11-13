@@ -311,6 +311,13 @@ function _lvcreate()
 # are likely to use different PVs to optimize concurrent IO throughput
 function onhost_create_cloud_lvm()
 {
+    # Check if VG already exists. Create otherwise
+    vgdisplay $cloudvg
+    if [ $? -ne 0 ]; then
+        safely pvcreate "$cloudpv"
+        safely vgcreate "$cloudvg" "$cloudpv"
+    fi
+
     safely vgchange -ay $cloudvg # for later boots
 
     local hdd_size
