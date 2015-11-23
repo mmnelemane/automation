@@ -2326,7 +2326,11 @@ function custom_configuration()
         ceilometer)
             if [[ $hacloud = 1 ]] ; then
                 proposal_set_value ceilometer default "['deployment']['ceilometer']['elements']['ceilometer-server']" "['cluster:$clusternameservices']"
-                proposal_set_value ceilometer default "['deployment']['ceilometer']['elements']['ceilometer-cagent']" "['cluster:$clusternameservices']"
+                if iscloudver 6plus; then
+                    proposal_set_value ceilometer default "['deployment']['ceilometer']['elements']['ceilometer-polling']" "['cluster:$clusternameservices']"
+                else 
+                    proposal_set_value ceilometer default "['deployment']['ceilometer']['elements']['ceilometer-cagent']" "['cluster:$clusternameservices']"
+                fi
                 # disabling mongodb, because if in one cluster mode the requirements of drbd and mongodb ha conflict:
                 #   drbd can only use 2 nodes max. <> mongodb ha requires 3 nodes min.
                 # this should be adapted when NFS mode is supported for data cluster
