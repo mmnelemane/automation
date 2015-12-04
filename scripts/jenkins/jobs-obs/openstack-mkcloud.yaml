@@ -1,0 +1,353 @@
+- job:
+    name: 'openstack-mkcloud'
+    project-type: matrix
+    logrotate:
+        daysToKeep: 300
+        numToKeep:  2000
+
+    triggers:
+      - timed: 'H 1 * * *'
+
+    execution-strategy:
+        sequential: true
+    parameters:
+      - string:
+          name: cloudsource
+          default: develcloud5
+          description: "Can be something like 'develcloud3' (uses Devel:Cloud:*, see TESTHEAD parameter for Staging), 'susecloud3' (uses SUSE:*), 'GM3' (uses the GM ISO)"
+      - choice:
+          name: mode
+          choices:
+            - standard
+            - basetest
+            - submit
+          description: "mode=basetest is for use by special triggers. Success on such a run will trigger more runs on this cloudsource.</description>"
+      - string:
+          name: mkcloudtarget
+          default: all
+          description: "Set mkcloudtarget to define the mkcloud command line parameters." 
+      - choice:
+          name: libvirt_type
+          choices:
+            - kvm
+            - xen
+            - hyperv 
+          description: ""
+      - choice:
+          name: networkingplugin
+          choices:
+            - openvswitch
+            - linuxbridge
+       - choice:
+           name: networkingmode
+           choices:
+             - gre
+             - vlan
+             - vxlan
+       - string:
+           name: github_pr
+           description: "&lt;ORG/repo&gt;:&lt;PRID&gt;:&lt;SHA1&gt;:&lt;BRANCH&gt; of PR to be tested (SHA1 must be latest commit in PR) SHA1 introduced to prevent accidental run of external PRs code. Will notify the github PR with mkcloud test results"
+       - text:
+           name: UPDATEREPOS
+           description: Update repositories (one URL per line)
+       - bool:
+           name: UPDATEBEFOREINSTALL
+           default: false
+           description: "Add update repos before crowbar install"
+       - string:
+           name: TESTHEAD
+           default: "1"
+           description: "if non-empty, test latest version from Devel:Cloud (:1.0)"
+       - string:
+           name: nodenumber
+           default: "2"
+           description: "number of nodes excl. admin-node minimum 2=controller+compute"
+       - string: 
+           name: want_tempest
+           description: "if non-empty, test latest version from Devel:Cloud (:1.0)"
+       - string:
+           name: tempestoptions
+           default: "-t -s"
+           description: "Additional options to pass to the 'run_tempest.sh -N ' step. Use just '-t' for a full tempest run."
+       - string:
+           name: want_sles12
+           description: "Set to 1 if sle12 nodes should be installed"
+       - string:
+           name: upgrade_cloudsource
+           description: "In case of using upgrade, upgrade to that cloudsource version"
+       - string:
+           name: hacloud
+           description: "If hacloud=1 then deploy a 4-node cluster"
+       - bool: 
+           name: WITHCROWBARREGISTER
+           default: false
+           description: "boot up one lonely node in the admin network and register it with crowbar_register (image type depends on want_sles12 parameter)"
+       - bool: 
+           name: want_swift
+           description: "can be used for force off(0) or on(1)"
+       - string:  
+           name: want_ceph
+           description: "can be used for force off(0) or on(1)"
+       - string: 
+           name: want_all_ssl
+           description: "set to 1 to deploy all cloud services with SSL aka HTTPS"
+       - choice:
+           name: cinder_backend#
+           choices:
+             - local
+             - raw
+             - rbd
+             - netapp
+       - bool:
+           name: want_cindermultibackend
+           default: false
+           description: "enables deployment of more than one cinder backend"
+       - bool: 
+           name: cinder_netapp_login
+           description: "this is currently the user 'openstack' as configured on the netapp server"
+       - string: 
+           name: cinder_netapp_password
+           description: "the password for the user 'openstack' as configured on the netapp server"
+       - string:
+           name: label
+           default: "openstack-mkcloud"
+           description: "Default: openstack-mkcloud | Possible values openstack-mkcloud-SLE11|openstack-mkcloud-SLE12 to build on SLE11 resp. SLE12" 
+       - string:
+           name: want_node_aliases
+           description: "List of aliases to assign to nodes. Takes all provided aliases and assign them to available nodes successively.
+
+        Examples:
+            want_node_aliases='controller=1,ceph=2,compute=1'
+              assigns the aliases to 4 nodes as controller, ceph1, ceph2, compute
+            want_node_aliases='data=1,services=2,storage=2'
+              assigns the aliases to 5 nodes as data, service1, service2, storage1, storage2"
+       - string:  
+           name: scenario
+           description: "Defines which scenario file should be used. Only works with cloud5 or newer.
+Currently only the 'batch' step uses such a file."
+    builders:
+      - update-automation
+      - shell: |
+          set -x 
+
+          # emptying the workspace
+          mkdir -p empty
+          rsync -r --delete empty/ ./
+          
+          export artifacts_dir=$WORKSPACE/.artifacts
+          rm -rf $artifacts_dir
+          mkdir -p $artifacts_dir
+          touch $artifacts_dir/.ignore
+          
+          export automationrepo=~/github.com/SUSE-Cloud/automation
+          export debug_qa_crowbarsetup=1
+          export cephvolumenumber=1 # one disk is either cinder raw, ceph-osd or swift storage
+          export debug=0
+          export want_neutronsles12=1
+          export want_mtu_size=8900
+          export rally_server=backup.cloudadm.qa.suse.de
+          # to not fail when two concurrent zypper runs happen:
+          export ZYPP_LOCK_TIMEOUT=120
+          
+          case $cloudsource in
+              GM4|GM4+up|GM5|GM5+up)
+                  echo "Not setting want_ldap=1"
+                  ;;
+              M*|develcloud6|susecloud6)
+                  echo "FIXME: Not setting want_ldap=1 until hybrid backend is ported to Kilo"
+                  ;;
+              *)
+                  [[ $nodenumber == 2 ]] &amp;&amp; export want_ldap=1
+                  ;;
+          esac
+          
+          if [[ $cinder_backend = " " ]] ; then
+            cinder_backend=""
+          fi
+          
+          # HAcloud
+          if [[ $hacloud == 1 ]] ; then
+            export clusterconfig="data+services+network=2"
+            if [[ $nodenumber &lt; 4 ]] ; then
+              export nodenumber=4
+            fi
+            
+            # for now disable ceph deployment in HA mode explicitly
+            # it would need 5 nodes (2 for the cluster + 3 nodes for compute and ceph)
+            export want_ceph=0
+            export cephvolumenumber=0
+          fi
+          
+          if [ ! -z "$UPDATEREPOS" ] ; then
+            # testing update only makes sense with GM and without TESTHEAD
+          #  unset TESTHEAD
+          #  export cloudsource=GM
+            export UPDATEREPOS=${UPDATEREPOS//$'\n'/+}
+          fi
+          
+          # automation bootstrapping
+          if ! [ -e ${automationrepo}/scripts/jenkins/update_automation ] ; then
+            rm -rf ${automationrepo}
+            curl https://raw.githubusercontent.com/SUSE-Cloud/automation/master/scripts/jenkins/update_automation | bash
+          fi
+          # fetch the latest automation updates
+          ${automationrepo}/scripts/jenkins/update_automation #NO PARAMETERS HERE ANY MORE!!!
+          
+          function mkcloudgating_trap()
+          {
+              $ghs -a set-status -s "failure" -r $github_pr_repo -t $BUILD_URL -c $github_pr_sha
+          }
+          
+          ## mkcloud github PR gating
+          if [[ $github_pr ]] ; then
+              github_opts=(${github_pr//:/ })
+              github_pr_repo=${github_opts[0]}
+              github_pr_id=${github_opts[1]}
+              github_pr_sha=${github_opts[2]}
+          
+              echo "testing PR: https://github.com/$github_pr_repo/pull/$github_pr_id"
+              ghs=${automationrepo}/scripts/github-status/github-status.rb
+              zypper -n install "rubygem(netrc)" "rubygem(octokit)"
+          
+              if ! $ghs -r $github_pr_repo -a is-latest-sha -p $github_pr_id -c $github_pr_sha ; then
+                  $ghs -a set-status -s "error" -t $BUILD_URL -r $github_pr_repo -c $github_pr_sha -m "SHA1 mismatch, newer commit exists"
+                  exit 1
+              fi
+          
+              trap "mkcloudgating_trap" ERR
+          
+              # Support for automation self-gating
+              if [[ "$github_pr_repo" = "SUSE-Cloud/automation" ]]; then
+                  automationrepo_orig=$automationrepo
+                  pr_dir=`mktemp -d $WORKSPACE/SUSE-Cloud.automation.XXXXXX`
+                  automationrepo=$pr_dir/automation
+          
+                  mkdir -p $automationrepo
+                  rsync -a ${automationrepo_orig%/}/ $automationrepo/
+                  pushd $automationrepo
+                  ghremote=origin
+                  git config --get-all remote.${ghremote}.fetch | grep -q pull || \
+                      git config --add remote.${ghremote}.fetch \
+                          "+refs/pull/*/head:refs/remotes/${ghremote}/pr/*"
+                  git fetch $ghremote
+                  git checkout -t $ghremote/pr/$github_pr_id
+                  echo "we merge to always test what will end up in master"
+                  git merge master -m temp-merge-commit
+                  popd
+              elif [[ "$github_pr_repo" = "SUSE-Cloud/cct" ]]; then
+                  export want_cct_pr=$github_pr_id
+              fi
+          
+              $ghs -a set-status -s "pending" -r $github_pr_repo -t $BUILD_URL -c $github_pr_sha
+              
+          fi
+          
+          echo "########################################################################"
+          env
+          echo "########################################################################"
+          
+          MKCLOUDTARGET=$mkcloudtarget
+          [ $UPDATEBEFOREINSTALL == "true" ] &amp;&amp; MKCLOUDTARGET='cleanup \
+            prepare setupadmin addupdaterepo instcrowbar setupcompute \
+            instcompute proposal testsetup'
+          
+          if [ $WITHCROWBARREGISTER == "true" ] ; then
+            export nodenumberlonelynode=1
+            MKCLOUDTARGET="$MKCLOUDTARGET setuplonelynodes crowbar_register"
+          fi
+          
+          if [ -e mkcloud.pid ] ; then
+              kill -KILL -`mkcloud.pid` ||: # make sure that the previous mkcloud (and subprocesses) are dead
+          fi
+          starttime=`date +%s`
+          
+          mkcloudwrapper="${automationrepo}/scripts/mkcloudhost/allocpool \
+                          ${automationrepo}/scripts/mkcloudhost/mkcloude"
+          #FIXME - drop next 3 lines once the change in allocpool is merged
+          if grep -q "exec.*mkcloude" ${automationrepo}/scripts/mkcloudhost/allocpool ; then
+              mkcloudwrapper=${automationrepo}/scripts/mkcloudhost/allocpool
+          fi
+          
+          perl -e "alarm 4*60*60 ; exec '${mkcloudwrapper} \
+                   bash -x ${automationrepo}/scripts/mkcloud \
+                   setuphost $(echo -n $MKCLOUDTARGET) ' " | \
+                       tee $artifacts_dir/mkcloud_short_stdout.log
+          ret=${PIPESTATUS[0]}
+          if [[ $ret != 0 ]] ; then
+              [[ $github_pr_sha ]] &amp;&amp; mkcloudgating_trap
+              echo "mkcloud ret=$ret"
+              exit $ret # check return code before tee
+          fi
+          
+          # report mkcloud-gating status
+          if [[ $github_pr_sha ]] ; then
+            $ghs -r $github_pr_repo -a set-status -s "success" -t $BUILD_URL -c $github_pr_sha
+            trap "-" ERR
+          fi
+          
+          [[ $TESTHEAD ]] || exit 0
+          [[ ! $hacloud  ]] || exit 0  # for now disable package submission for ha setups
+          [[ $github_pr_sha ]] &amp;&amp; exit 0
+          
+          
+          if [[ $mode == "basetest" ]] ; then
+              echo "$mode succeeded - triggering extra tests"
+              d=/root/lasttriggered
+              f=$d/$cloudsource
+              last=$(cat $f || echo 0)
+              echo "if [[ $(($last + 1800)) -gt $(date +%s) ]] ; then echo we just triggered ... skipping ; exit 0 ; fi"
+              mkdir -p $d
+              date +%s &gt; $f
+              extra=""
+              nodenumber=3
+              case $cloudsource in
+                  develcloud5)
+                      extra="want_sles12=1"
+                      ;;
+                  develcloud6)
+                      nodenumber=4
+                      ;;
+              esac
+              # linuxbridge+ceph:
+              ${automationrepo}/scripts/jenkins/jenkins-job-trigger openstack-mkcloud -p \
+                  mode=submit cloudsource="${cloudsource}" nodenumber=$nodenumber \
+                  networkingplugin=linuxbridge $extra
+          fi
+          
+          [[ $mode == "submit" ]] || exit 0 # only submit on mode=submit
+          
+          case "$cloudsource" in
+            develcloud4)
+              project=Devel:Cloud:4
+              subproject=Staging
+              packagefilter="crowbar python openstack suse-cloud-upgrade"
+            ;;
+            develcloud5)
+              project=Devel:Cloud:5
+              subproject=Staging
+              packagefilter="crowbar python openstack suse-cloud-upgrade"
+            ;;
+            develcloud6)
+              project=Devel:Cloud:6
+              subproject=Staging
+              packagefilter="crowbar python openstack patterns suse-cloud-upgrade"
+            ;;
+            *)
+              echo "nothing to submit"
+              exit 0
+            ;;
+          esac
+
+          ${automationrepo}/scripts/jenkins/jenkins-job-trigger openstack-submit-project -p project="${project}" subproject="${subproject}" packagefilter="${packagefilter}" starttime="${starttime}"
+    publishers:
+      - archive:
+          artifacts: ".artifacts/**"
+          allow-empty: "false"
+          only-if-success: "false"
+          fingerprint: false
+          default-excludes: true
+          case-sensitive: true
+    wrappers:
+      - timeout:
+          timeout-var: "3600"
+          
