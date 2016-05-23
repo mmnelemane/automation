@@ -2621,6 +2621,13 @@ function custom_configuration()
         neutron)
             [[ "$networkingplugin" = linuxbridge ]] && networkingmode=vlan
             proposal_set_value neutron default "['attributes']['neutron']['use_lbaas']" "true"
+           
+            # Enable APIC installation for neutron if required
+            if iscloudver 6plus; then
+                if [[ "$networkingplugin" = "openvswitch" ]] && [[ -n "$want_apic" ]]; then
+                    proposal_set_value neutron default "['attributes']['neutron']['use_apic']" "true"
+                fi
+            fi
 
             if iscloudver 5plus; then
                 if [ "$networkingplugin" = "openvswitch" ] ; then
