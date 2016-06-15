@@ -28,7 +28,7 @@ distsuseip=$(dig -t A +short $distsuse)
 : ${want_rootpw:=linux}
 : ${want_raidtype:="raid1"}
 : ${want_multidnstest:=1}
-
+: ${create_default_networks:='true'}
 : ${arch:=$(uname -m)}
 
 # global variables that are set within this script
@@ -2741,6 +2741,12 @@ function custom_configuration()
         neutron)
             [[ "$networkingplugin" = linuxbridge ]] && networkingmode=vlan
             proposal_set_value neutron default "['attributes']['neutron']['use_lbaas']" "true"
+            proposal_set_value neutron default "['attributes']['neutron']['create_default_networks']" "$create_default_networks"
+            #proposal_set_value neutron default "['attributes']['neutron']['ml2_mechanism_drivers']" "'opendaylight'"
+            #proposal_set_value neutron default "['attributes']['neutron']['odl']['controller_ip']" "'192.168.124.81'"
+            #proposal_set_value neutron default "['attributes']['neutron']['odl']['controller_port']" "'8080'"
+            #proposal_set_value neutron default "['attributes']['neutron']['odl']['username']" "'admin'"
+            #proposal_set_value neutron default "['attributes']['neutron']['odl']['password']" "'admin'"
 
             if iscloudver 5plus; then
                 if [ "$networkingplugin" = "openvswitch" ] ; then
@@ -3158,7 +3164,7 @@ function onadmin_proposal()
         done
     fi
     local proposal
-    for proposal in nfs_client pacemaker database rabbitmq keystone swift ceph glance cinder neutron nova `horizon_barclamp` ceilometer heat manila trove tempest; do
+    for proposal in nfs_client pacemaker database rabbitmq keystone swift ceph glance cinder neutron nova `horizon_barclamp` ceilometer heat trove; do
         deploy_single_proposal $proposal
     done
 
@@ -3309,11 +3315,33 @@ function glance_image_get_id()
     echo $image_id
 }
 
+function onadmin_setup_odl()
+{
+    repos_yml="/etc/crowbar/repos.yml"
+    zypper ar http://download.suse.de/ibs/home:/mmnelemane:/opnfv/Devel_Cloud_7_Mitaka_SLE_12_SP2/home:mmnelemane:opnfv.repo --name opnfv_mitaka
+    zypper ar http://download.suse.de/ibs/home:/mmnelemane:/opnfv/Devel_Cloud_7_Staging_SLE12_SP2/home:mmnelemane:opnfv.repo --name opnfv_staging
+    zypper --non-interactive --gpg-auto-import-keys --no-gpg-checks install crowbar-opendaylight
+    create_repos_yml_for_platform "suse-12.2" "x86_64" "$tftpboot_repos12sp2_dir" \
+        OPNFV_Updates=http://download.suse.de/ibs/home:/mmnelemane:/opnfv/Devel_Cloud_7_Staging_SLE12_SP2/ \
+        >> $repos_yml
+    oncontroller oncontroller_setup_odl
+}
+
+function oncontroller_setup_odl()
+{
+    zypper ar http://download.suse.de/ibs/home:/mmnelemane:/opnfv/Devel_Cloud_7_Mitaka_SLE_12_SP2/home:mmnelemane:opnfv.repo --name opnfv_mitaka
+    zypper ar http://download.suse.de/ibs/home:/mmnelemane:/opnfv/Devel_Cloud_7_Staging_SLE12_SP2/home:mmnelemane:opnfv.repo --name opnfv_staging
+    zypper refresh
+    cd /tmp
+    wget http://$clouddata/images/SLES12-JeOS-for-OpenStack-Cloud.x86_64-GM.qcow2
+    glance image-create --container-format bare --disk-format qcow2 --file SLES12-JeOS-for-OpenStack-Cloud.x86_64-GM.qcow2 --name JeOS_Cloud_Image
+}
+
 function oncontroller_tempest_cleanup()
 {
     if iscloudver 5plus; then
         if tempest help cleanup &>/dev/null; then
-            tempest cleanup --delete-tempest-conf-objects
+            tempest cleanup --delete-tempest-conf-objects 
         else
             /usr/bin/tempest-cleanup --delete-tempest-conf-objects || :
         fi

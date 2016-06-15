@@ -953,6 +953,11 @@ function rebootneutron()
     return $?
 }
 
+function setup_odl()
+{
+    onadmin setup_odl
+}
+
 function qa_test()
 {
     local ghsc=github.com/SUSE-Cloud
@@ -1408,7 +1413,7 @@ allcmds="$step_aliases all all_noreboot all_batch all_batch_noreboot instonly \
     rebootneutron cloudupgrade \
     setuplonelynodes crowbar_register createadminsnapshot \
     restoreadminfromsnapshot createcloudsnapshot restorecloudfromsnapshot \
-    cct steps batch setup_aliases onadmin onhost"
+    cct steps batch setup_aliases onadmin onhost setup_odl"
 wantedcmds=$@
 
 function expand_steps()
