@@ -2252,8 +2252,13 @@ function onadmin_get_proposalstatus()
 {
     local proposal=$1
     local proposaltype=$2
-    crowbar $proposal proposal show $proposaltype | \
-        rubyjsonparse "puts j['deployment']['$proposal']['crowbar-status']"
+    if [[ "$proposal" == "magnum" ]]; then
+        crowbarctl proposal show $proposal $proposaltype --format json | \
+            rubyjsonparse "puts j['deployment']['$proposal']['crowbar-status']"
+    else
+        crowbar $proposal proposal show $proposaltype | \
+            rubyjsonparse "puts j['deployment']['$proposal']['crowbar-status']"
+    fi
 }
 
 function onadmin_get_machinesstatus()
@@ -2516,7 +2521,11 @@ function custom_configuration()
     # prepare the proposal file to be edited, it will be read once at the end
     # So, ONLY edit the $pfile  -  DO NOT call "crowbar $x proposal .*" command
     local pfile=`get_proposal_filename "${proposal}" "${proposaltype}"`
-    crowbar $proposal proposal show $proposaltype > $pfile
+    if [[ "$proposal" == "magnum" ]]; then
+        crowbarctl proposal show $proposal $proposaltype --format json > $pfile
+    else
+        crowbar $proposal proposal show $proposaltype > $pfile
+    fi
 
     if [[ $debug_openstack = 1 && $proposal != swift ]] ; then
         sed -i -e "s/debug\": false/debug\": true/" -e "s/verbose\": false/verbose\": true/" $pfile
@@ -2663,8 +2672,8 @@ function custom_configuration()
             proposal_set_value ceph default "['attributes']['ceph']['disk_mode']" "'all'"
         ;;
         magnum)
-            proposal set_value magnum default "['attributes']['magnum']['trustee']['domain_name']" "'magnum'"
-            proposal set_value magnum default "['attributes']['magnum']['trustee']['domain_admin_name']" "'magnum_domain_admin'"
+            proposal_set_value magnum default "['attributes']['magnum']['trustee']['domain_name']" "'magnum'"
+            proposal_set_value magnum default "['attributes']['magnum']['trustee']['domain_admin_name']" "'magnum_domain_admin'"
             ;;
         nova)
             local role_prefix=`nova_role_prefix`
@@ -2894,9 +2903,13 @@ function custom_configuration()
         *) echo "No hooks defined for service: $proposal"
         ;;
     esac
-
-    crowbar $proposal proposal edit $proposaltype --file=$pfile ||\
-        complain 88 "'crowbar $proposal proposal edit $proposaltype --file=$pfile' failed with exit code: $?"
+    if [[ "$proposal" == "magnum" ]]; then
+        crowbarctl proposal edit $proposal $proposaltype --file=$pfile ||\
+            complain 88 "'crowbarctl proposal edit $proposal $proposaltype --file=$pfile' failed with exit code: $?"
+    else
+        crowbar $proposal proposal --file=$pfile edit $proposaltype ||\
+            complain 88 "'crowbar $proposal proposal --file=$pfile edit $proposaltype' failed with exit code: $?"
+    fi
 }
 
 # set global variables to be used in and after proposal phase
@@ -3007,7 +3020,11 @@ function update_one_proposal()
     # hook for changing proposals:
     custom_configuration $proposal $proposaltypemapped
 
-    crowbar $proposal proposal commit $proposaltype
+    if [[ "$proposal" == "magnum" ]]; then
+        crowbarctl proposal commit $proposal $proposaltype
+    else
+        crowbar "$proposal" proposal commit $proposaltype
+    fi
     local ret=$?
     echo "Commit exit code: $ret"
     if [ "$ret" = "0" ]; then
@@ -3034,7 +3051,11 @@ function do_one_proposal()
     # extract them for the proposal creation, but pass them to update_one_proposal
     local proposaltypemapped=$proposaltype
     proposaltype=${proposaltype%%+*}
-    crowbar $proposal proposal create $proposaltype
+    if [[ "$proposal" == "magnum" ]]; then
+        crowbarctl proposal create $proposal $proposaltype --default
+    else
+        crowbar "$proposal" proposal create $proposaltype
+    fi
     update_one_proposal "$proposal" "$proposaltypemapped"
 }
 
@@ -3156,7 +3177,7 @@ function onadmin_proposal()
         done
     fi
     local proposal
-    for proposal in nfs_client pacemaker database rabbitmq keystone swift ceph glance cinder neutron nova `horizon_barclamp` ceilometer heat manila trove magnum tempest; do
+    for proposal in nfs_client pacemaker database rabbitmq keystone swift ceph glance cinder neutron nova `horizon_barclamp` ceilometer heat magnum manila trove tempest; do
         deploy_single_proposal $proposal
     done
 
@@ -3461,7 +3482,8 @@ function oncontroller_magnum_service_setup ()
     local service_image_name=magnum-service-image.qcow2
     local service_image_url=http://clouddata.cloud.suse.de/images/other/$service_image_name
 
-    if ! openstack image list --f value -c Name | grep -q "^magnum-service-image$"; then
+    . ~/.openrc
+    if ! openstack image list -f value -c Name | grep -q "^magnum-service-image$"; then
         local ret=$(wget -N --progress=dot:mega "$service_image_url" 2>&1 >/dev/null)
         if [[ $ret =~ "200 OK" ]]; then
             echo $ret
@@ -3470,8 +3492,6 @@ function oncontroller_magnum_service_setup ()
         else
             complain 74 "failed to retrieve magnum image: $ret"
         fi
-
-        . ~/.openrc
 
         openstack image create --file $service_image_name \
             --disk-format qcow2 --container-format bare --public \
@@ -3966,9 +3986,16 @@ function get_proposal_role_elements()
 {
     local proposal=$1
     local role=$2
-    local element=$(crowbar $proposal proposal show default | \
-        rubyjsonparse "
-            puts j['deployment']['$proposal']['elements']['$role'];")
+    local element=""
+    if [[ "$proposal" == "magnum" ]]; then
+        element=$(crowbarctl proposal show $proposal default --format json | \
+            rubyjsonparse "
+                puts j['deployment']['$proposal']['elements']['$role'];")
+    else
+        element=$(crowbar $proposal proposal show default | \
+            rubyjsonparse "
+                puts j['deployment']['$proposal']['elements']['$role'];")
+    fi
     echo $element
 }
 
