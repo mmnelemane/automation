@@ -97,6 +97,7 @@ needcvol=1
 : ${controller_node_memory:=6291456}
 : ${compute_node_memory:=2621440}
 : ${hyperv_node_memory:=3000000}
+: ${firmware_type:="bios"}
 [[ "$libvirt_type" = "hyperv" && $compute_node_memory -lt $hyperv_node_memory ]] && compute_node_memory=$hyperv_node_memory
 : ${xen_node_memory:=4000000}
 [[ "$libvirt_type" = "xen" && $compute_node_memory -lt $xen_node_memory ]] && compute_node_memory=$xen_node_memory
@@ -135,6 +136,7 @@ scp="scp $sshopts"
 : ${cct_tests:="features:base"}
 
 [[ -z ${want_mtu_size} ]] && want_mtu_size=1500
+[[ -n $want_efi ]] && firmware_type="uefi"
 
 emulator=/usr/bin/qemu-system-$arch
 if [ -x /usr/bin/qemu-kvm ] && file /usr/bin/qemu-kvm | grep -q ELF; then
@@ -227,6 +229,7 @@ function sshrun()
         export adminip=$adminip ;
         export hacloud=$hacloud ;
         export libvirt_type=$libvirt_type ;
+        export firmware_type=$firmware_type ;
         export networkingplugin=$networkingplugin ;
         export networkingmode=$networkingmode ;
         export nosetestparameters=${nosetestparameters} ;
@@ -427,10 +430,16 @@ function onhost_deploy_image()
     local role=$1
     local image=$(dist_to_image_name $2)
     local disk=$3
+    local image_url="http://$clouddata/images/$arch/$image"
 
+    [[ -n $want_efi ]] && {
+        image_url="http://download.suse.de/ibs/Devel:/Cloud:/Images/images_SLE_12_SP2/mkcloud-admin-node-SLE12SP2-uefi.x86_64.qcow2"
+        image="mkcloud-admin-node-SLE12SP2-uefi.x86_64.qcow2"
+    }
+
+    echo "MMNELEMANE: Image URL for UEFI boot: $image_url"
     pushd /tmp
-    safely wget --progress=dot:mega -N \
-        http://$clouddata/images/$arch/$image
+    safely wget --no-check-certificate --progress=dot:mega -N $image_url
 
     echo "Cloning $role node vdisk from $image ..."
     safely qemu-img convert -t none -O raw -S 0 -p $image $disk
@@ -481,6 +490,13 @@ function setuphost()
         # enable KVM
         [[ $arch = s390x ]] && {
             echo 1 > /proc/sys/vm/allocate_pgste
+        }
+
+        # enable UEFI boot
+        [[ -n $want_efi ]] && {
+            zypper --non-interactive in --no-recommends \
+                ovmf ovmf-tools qemu-ovmf-x86_64
+            [ "$?" == 0 -o "$?" == 4 ] || complain 10 "setuphost failed to install required packages"
         }
     fi
 
@@ -739,8 +755,8 @@ function setuplonelynodes()
         lonely_node=$cloud-node$i
         safely ${mkcloud_lib_dir}/libvirt/compute-config $cloud $i $mac 0\
             "$cephvolumenumber" "$drbdvolume" $compute_node_memory\
-            $controller_node_memory $libvirt_type $vcpus $emulator $vdisk_dir\
-            1 1 > /tmp/$cloud-node$i.xml
+            $controller_node_memory $libvirt_type $vcpus \
+            $emulator $vdisk_dir 1 1 > /tmp/$cloud-node$i.xml
 
         local lonely_disk
         lonely_disk="$vdisk_dir/${cloud}.node$i"
@@ -873,8 +889,9 @@ function setupnodes()
 
         ${mkcloud_lib_dir}/libvirt/compute-config $cloud $i $macaddress\
             $controller_raid_volumes $cephvolumenumber "$drbd_serial"\
-            $compute_node_memory $controller_node_memory $libvirt_type $vcpus\
-            $emulator $vdisk_dir 3 $nodenumbercontroller > /tmp/$cloud-node$i.xml
+            $compute_node_memory $controller_node_memory $libvirt_type \
+            $vcpus $emulator $vdisk_dir 3 \
+            $nodenumbercontroller > /tmp/$cloud-node$i.xml
         ${mkcloud_lib_dir}/libvirt/vm-start /tmp/$cloud-node$i.xml
     done
 
@@ -1320,6 +1337,8 @@ Optional
         Deployed by default. Set to 0 to prevent barbican from being deployed.
     want_sahara=0 (default=0)
         Set to 1 to deploy sahara.
+    want_efi=1 (default=0)
+        Deploy nodes with EFI. Only available from SLE12_SP1 and later.
     install_chef_suse_override='path/to/script'
         Optional path to an alternate version of install-chef-suse.sh on the mkcloud hostto use
         instead of the one from the packages.  This will be scp'd to the admin node before use.
@@ -1361,6 +1380,7 @@ EOUSAGE
 # computenode_hdd_size
 # cloudbr
 # libvirt_type
+# firmware_type
 # localreposdir_src
 # localreposdir_target
 # wipe

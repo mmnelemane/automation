@@ -103,12 +103,11 @@ function libvirt_prepare()
 
 function libvirt_setupadmin()
 {
-    echo "MMNELEMANE: Doing admin-config with firmware: $firmware_type"
     nvramtemplate=""
     if [[ $(uname -m) == x86_64 ]] && [[ "$firmware_type" == "uefi" ]]; then
-        nvramtemplate="/usr/share/qemu/ovmf-x86_64-vars.bin"
+        nvramtemplate="/usr/share/qemu/ovmf-x86_64-ms-vars.bin"
     fi
 
-    ${mkcloud_lib_dir}/libvirt/admin-config $cloud $admin_node_memory $adminvcpus $emulator $admin_node_disk "$localreposdir_src" "$localreposdir_target" $firmware_type "$nvramtemplate" > /tmp/$cloud-admin.xml
+    ${mkcloud_lib_dir}/libvirt/admin-config $cloud $admin_node_memory $adminvcpus $emulator $admin_node_disk "$localreposdir_src" "$localreposdir_target" "$firmware_type" "$nvramtemplate" > /tmp/$cloud-admin.xml
     ${mkcloud_lib_dir}/libvirt/vm-start /tmp/$cloud-admin.xml || exit $?
 }

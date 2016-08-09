@@ -62,13 +62,13 @@ def get_os_loader(firmware_type=""):
         path = '/usr/share/qemu/aavmf-aarch64-code.bin'
         return """    <loader readonly='yes' type='pflash'>%s</loader>""" % path
     elif 'x86_64' in get_machine_arch() and firmware_type == "uefi":
-        path = '/usr/share/qemu/ovmf-x86_64-code.bin'
+        path = '/usr/share/qemu/ovmf-x86_64-ms-code.bin'
         return """    <loader readonly='yes' type='pflash'>%s</loader>""" % path
     return ""
 
 def get_nvram_template(firmware_type=""):
     if 'x86_64' in get_machine_arch() and firmware_type == "uefi":
-        return "/usr/share/qemu/ovmf-x86_64-vars.bin"
+        return "/usr/share/qemu/ovmf-x86_64-ms-vars.bin"
     return ""
 
 
@@ -152,9 +152,9 @@ def admin_config(args, cpu_flags=cpuflags()):
         adminvcpus=args.adminvcpus,
         cpuflags=cpu_flags,
         emulator=args.emulator,
-        osloader=get_os_loader(firmware_type=args.firmwaretype),
         march=get_machine_arch(),
-        nvram_template=args.nvram_template,
+        osloader=get_os_loader(firmware_type=args.firmwaretype),
+        nvram_template=get_nvram_template(firmware_type=args.nvram_template),
         machine=get_default_machine(),
         memballoon=get_memballoon_type(),
         maindiskaddress=get_maindisk_address(),
@@ -190,7 +190,6 @@ def compute_config(args, cpu_flags=cpuflags(), machine=None):
         machine = get_default_machine()
 
     libvirt_type = args.libvirttype
-    firmware_type = args.firmwaretype
     alldevices = it.chain(it.chain(string.lowercase[1:]),
                           it.product(string.lowercase, string.lowercase))
 
@@ -281,9 +280,8 @@ def compute_config(args, cpu_flags=cpuflags(), machine=None):
         vcpus=args.vcpus,
         march=get_machine_arch(),
         machine=machine,
-        osloader=get_os_loader(firmware_type=args.firmwaretype),
-        nvram_template=get_nvram_template(firmware_type=args.firmwaretype),
         cpuflags=cpu_flags,
+        osloader=get_os_loader(firmware_type=""),
         consoletype=get_console_type(),
         raidvolume=raidvolume,
         cephvolume=cephvolume,

@@ -675,7 +675,7 @@ function addcloud6pool()
 function addcctdepsrepo()
 {
     if [[ "$cloudsource" == @(develcloud5|GM5|GM5+up) ]]; then
-        zypper ar -f http://$susedownload/ibs/Devel:/Cloud:/Shared:/Rubygem/SLE_11_SP3/Devel:Cloud:Shared:Rubygem.repo
+        zypper --non-interactive --no-gpg-checks ar -f http://$susedownload/ibs/Devel:/Cloud:/Shared:/Rubygem/SLE_11_SP3/Devel:Cloud:Shared:Rubygem.repo
     else
         add_sdk_repo
     fi
