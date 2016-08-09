@@ -23,6 +23,8 @@ def main():
     parser.add_argument("controllernodememory", type=int,
                         help="Controller Node Memory (kB)")
     parser.add_argument("libvirttype", help="Libvirt Type (e.g. kvm)")
+    parser.add_argument("firmwaretype",
+                        help="Firmware Type(e.g: uefi. Default:''=>bios")
     parser.add_argument("vcpus", type=int, help="Number of VCPUs")
     parser.add_argument("emulator", help="QEMU to use",
                         default="/usr/bin/qemu-system-%s" % os.uname()[4])

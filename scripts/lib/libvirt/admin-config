@@ -18,6 +18,10 @@ def main():
                         help="Local Repository Directory Source")
     parser.add_argument("localrepotgt",
                         help="Local Repository Directory Target")
+    parser.add_argument("firmwaretype",
+                        help="Boot firmware type for the node")
+    parser.add_argument("nvram_template",
+                        help="Location of nvram template")
     args = parser.parse_args()
 
     print(libvirt_setup.admin_config(args))

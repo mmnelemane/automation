@@ -6,7 +6,7 @@
   <os>
     <type arch='$march' machine='$machine'>hvm</type>
 $osloader
-    <nvram>/var/lib/libvirt/$cloud-admin_VARS.fd</nvram>
+    <nvram template='$nvram_template'>/var/lib/libvirt/$cloud-admin_VARS.fd</nvram>
     <boot dev='hd'/>
   </os>
 $cpuflags

@@ -110,6 +110,7 @@ class TestLibvirtComputeConfig(unittest.TestCase):
         args.computenodememory = 2097152
         args.controllernodememory = 5242880
         args.libvirttype = "kvm"
+        args.firmwaretype = ""
         args.vcpus = 1
         args.emulator = "/usr/bin/qemu-system-x86_64"
         args.vdiskdir = "/dev/cloud"
@@ -134,6 +135,7 @@ class TestLibvirtComputeConfig(unittest.TestCase):
         args.computenodememory = 2097152
         args.controllernodememory = 5242880
         args.libvirttype = "xen"
+        args.firmwaretype = ""
         args.vcpus = 1
         args.emulator = "/usr/bin/qemu-system-x86_64"
         args.vdiskdir = "/dev/cloud"
@@ -158,6 +160,7 @@ class TestLibvirtComputeConfig(unittest.TestCase):
         args.computenodememory = 2097152
         args.controllernodememory = 5242880
         args.libvirttype = "kvm"
+        args.firmwaretype = ""
         args.vcpus = 1
         args.emulator = "/usr/bin/qemu-system-x86_64"
         args.vdiskdir = "/dev/cloud"
