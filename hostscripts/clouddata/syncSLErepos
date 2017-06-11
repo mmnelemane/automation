@@ -289,14 +289,15 @@ for arch in $archs ; do
     $rsync ${ibs_source}/SUSE/Updates/SLE-Module-Adv-Systems-Management/12/x86_64/update/ /srv/nfs/repos/$arch/SLE12-Module-Adv-Systems-Management-Updates
 done
 
-if [ $SITE = "nue" ]; then
-    # repos we need for our test automation (jenkins-swarm-client, github-status, jt_sync, cct)
-    for obsrepo in devel:/languages:/ruby:/extensions/SLE_12 devel:/tools:/building/SLE_12_SP1 ; do
-        rsync_with_create rsync://rsync.opensuse.org/buildservice-repos/$obsrepo/ /srv/nfs/repos/repositories/$obsrepo/
-    done
+# sync admin images
+for arch in x86_64 aarch64 s390x ; do
+    $rsync -L /mnt/dist/ibs/Devel:/Cloud:/Images/images_SLE_12_SP2/mkcloud-admin-node-SLE12SP2.${arch}.qcow2 /srv/nfs/images/$arch/SLES12-SP2-untested.qcow2
 
-    # this one is always failing - we need to ignore that otherwise the lock file remains stuck
-    timeout 1h ~/bin/syncgitrepos || :
-fi
+    $rsync -L /mnt/dist/ibs/Devel:/Cloud:/Images/images_SLE_12_SP3/mkcloud-admin-node-SLE12SP3.${arch}.qcow2 /srv/nfs/images/$arch/SLES12-SP3-untested.qcow2
+
+    if [ "$arch" == x86_64 ]; then
+        $rsync -L /mnt/dist/ibs/Devel:/Cloud:/Images/images_SLE_12_SP2/mkcloud-admin-node-SLE12SP2-uefi.${arch}.qcow2 /srv/nfs/images/$arch/SLES12-SP2-uefi.qcow2
+    fi
+done
 
 rm -f $lockf

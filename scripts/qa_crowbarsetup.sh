@@ -293,6 +293,62 @@ function add_salt_repo
     done
 }
 
+function addcloud6testupdates
+{
+    add_mount "SUSE-OpenStack-Cloud-6-Updates-test" \
+        $distsuseip':/dist/ibs/SUSE:/Maintenance:/Test:/OpenStack-Cloud:/6:/x86_64/update/' \
+        "$tftpboot_repos12sp1_dir/SUSE-OpenStack-Cloud-6-Updates-test/" "cloudtup"
+}
+
+function addcloud6pool
+{
+    add_mount "SUSE-OpenStack-Cloud-6-Pool" \
+        "$nfsserver_ip:$nfsserver_base_path/repos/$arch/SUSE-OpenStack-Cloud-6-Pool/" \
+        "$tftpboot_repos12sp1_dir/SUSE-OpenStack-Cloud-6-Pool/" \
+        "cloudpool"
+}
+
+function addcloud7pool
+{
+    add_mount "SUSE-OpenStack-Cloud-7-Pool" \
+        "$nfsserver_ip:$nfsserver_base_path/repos/$arch/SUSE-OpenStack-Cloud-7-Pool/" \
+        "$tftpboot_repos12sp2_dir/SUSE-OpenStack-Cloud-7-Pool/" \
+        "cloudpool"
+}
+
+function addcloud8pool
+{
+    add_mount "SUSE-OpenStack-Cloud-8-Pool" \
+        "$nfsserver_ip:$nfsserver_base_path/repos/$arch/SUSE-OpenStack-Cloud-8-Pool/" \
+        "$tftpboot_repos12sp3_dir/SUSE-OpenStack-Cloud-8-Pool/" \
+        "cloudpool"
+}
+
+function addcloud7maintupdates
+{
+    add_mount "SUSE-OpenStack-Cloud-7-Updates" \
+        "$nfsserver_ip:$nfsserver_base_path/repos/$arch/SUSE-OpenStack-Cloud-7-Updates/" \
+        "$tftpboot_repos12sp2_dir/SUSE-OpenStack-Cloud-7-Updates/" \
+        "cloudmaintup"
+}
+
+function addcloud7testupdates
+{
+    add_mount "SUSE-OpenStack-Cloud-7-Updates-test" \
+        $distsuseip':/dist/ibs/SUSE:/Maintenance:/Test:/OpenStack-Cloud:/7:/x86_64/update/' \
+        "$tftpboot_repos12sp2_dir/SUSE-OpenStack-Cloud-7-Updates-test/" "cloudtup"
+}
+
+function addcctdepsrepo
+{
+    if [[ $cloudsource = @(develcloud5|GM5|GM5+up) ]]; then
+        $zypper ar -f http://$susedownload/ibs/Devel:/Cloud:/Shared:/Rubygem/SLE_11_SP3/Devel:Cloud:Shared:Rubygem.repo
+    else
+        add_sdk_repo
+    fi
+>>>>>>> Start cloud8 development
+}
+
 function add_sdk_repo
 {
     local sdk_repo_priority
@@ -561,6 +617,18 @@ function onadmin_prepare_sles12sp1_repos
     onadmin_prepare_sles12sp1_other_repos
 }
 
+function onadmin_prepare_sles12sp2_repos
+{
+    onadmin_prepare_sles12sp2_installmedia
+    onadmin_prepare_sles12sp2_other_repos
+}
+
+function onadmin_prepare_sles12sp3_repos
+{
+    onadmin_prepare_sles12sp3_installmedia
+    onadmin_prepare_sles12sp3_other_repos
+}
+
 function onadmin_prepare_sles12plus_cloud_repos
 {
     #  create empty repository when there is none yet
@@ -602,6 +670,20 @@ function onadmin_prepare_sles_other_repos
 {
     for repo in SLES$slesversion-{Pool,Updates,LTSS-Updates}; do
         add_mount "repos/$arch/$repo" "$tftpboot_repos_dir/$repo"
+    done
+}
+
+function onadmin_prepare_sles12sp3_other_repos
+{
+    for repo in SLES12-SP3-{Pool,Updates}; do
+        add_mount "$repo/sle-12-$arch" \
+            "$nfsserver_ip:$nfsserver_base_path/repos/$arch/$repo" \
+            "$tftpboot_repos12sp3_dir/$repo"
+        if [[ $want_s390 ]] ; then
+            add_mount "$repo/sle-12-s390x" \
+                "$nfsserver_ip:$nfsserver_base_path/repos/s390x/$repo" \
+                "$tftpboot_suse12sp3_dir/s390x/repos/$repo"
+        fi
     done
 }
 
@@ -914,6 +996,11 @@ function onadmin_set_source_variables
         ;;
         *)
             complain 76 "You must set environment variable cloudsource=develcloud6|develcloud7|develcloud8|Mx|GM6|GM7"
+        ;;
+        12.3)
+            slesversion=12-SP3
+            slesdist=SLE_12_SP3
+            slesmilestone=LATEST
         ;;
     esac
 
