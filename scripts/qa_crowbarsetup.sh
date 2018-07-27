@@ -283,6 +283,7 @@ function addslestestupdates
     fi
 }
 
+
 function addcloudmaintupdates
 {
     add_mount "repos/$arch/SUSE-OpenStack-Cloud-$cloudrepover-Updates/" \
@@ -339,6 +340,11 @@ function add_continuousdelivery_repo
     [[ $TESTHEAD ]] && stage=":/Staging"
     # priority required to overwrite the default cloud6 packages
     $zypper ar -p 92 -f http://$susedownload/ibs/Devel:/Cloud:/6:/SAP${stage}/SLE_12_SP1/ dc6cd
+}
+
+function addacirepo
+{
+    $zypper ar -p 92 -f http://download.opensuse.org/repositories/Cloud:/OpenStack:/Pike:/cisco-apic/SLE_12_SP3/ dc8aci
 }
 
 function add_ha_repo
@@ -1045,6 +1051,8 @@ EOF
     # setup cloud repos for tftpboot and zypper
     onadmin_prepare_cloud_repos
     onadmin_add_cloud_repo
+
+    iscloudver 8plus && [[ $want_aci = 1 ]] && addacirepo
 
     zypper_refresh
 
